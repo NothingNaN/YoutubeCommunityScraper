@@ -1,0 +1,5 @@
+*.json
+*.html
+*.txt
+__pycache__
+.vscode
