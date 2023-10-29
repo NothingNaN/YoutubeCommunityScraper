@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 logging.basicConfig(format='[%(levelname)s]: %(message)s', level=logging.WARNING, stream=sys.stdout)
 
 
-def _get_SOCS_cookie() -> str:
+def get_SOCS_cookie() -> str:
     session = HTMLSession()
     result = session.get(url='https://www.youtube.com/feed')
 
@@ -235,8 +235,8 @@ def get_pbar(update: bool = False):
 
 # TODO: maybe add polls? need specific cookies to unlock poll votes
 
-if __name__ == "__main__":
-    cookies = {"SOCS": _get_SOCS_cookie()}
+def run():
+    cookies = {"SOCS": get_SOCS_cookie()}
     ap = get_arg_parser()
     args = vars(ap.parse_args())
 
@@ -252,3 +252,6 @@ if __name__ == "__main__":
         loop.run_until_complete(asyncio.gather(*tasks))
         for obj in objects:
             obj.save(pbar, folder=args['folderpath'], reverse=args['reverse'], update=args['update'])
+
+if __name__ == "__main__":
+    run()

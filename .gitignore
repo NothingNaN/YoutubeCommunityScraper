@@ -1,6 +1,7 @@
 *.json
 *.html
 *.txt
-__pycache__
+*__pycache__
 .vscode
 other
+dist
