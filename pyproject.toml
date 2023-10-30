@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "yp-dl"
-version = "0.9.5"
+version = "0.9.6"
 description = "Asynchronous scraper to download youtube community posts"
 authors = ["Boltzmann Potato <boltzmannpotato@proton.me>"]
 license = "MIT"

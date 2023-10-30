@@ -91,7 +91,7 @@ class YoutubePosts:
         self.api_url = None
         self.token = None
         self.channel_link = channel_link
-        self.channel_name = channel_link[24:]
+        self.channel_name = channel_link[24:] if channel_link[-1] != '/' else channel_link[24:-1]
         self.link = channel_link + '/community'
         self.session = AsyncHTMLSession()
         self.cookies = cookies
