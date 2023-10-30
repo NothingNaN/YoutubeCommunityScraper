@@ -179,7 +179,7 @@ class YoutubePosts:
     def save(self, pbar: Progress, folder: str | None = None, reverse: bool = False, update: bool = False) -> None:
 
         if folder:
-            folder += '/' if folder[-1] != '/' else None
+            folder += '/' if folder[-1] != '/' else ''
         if reverse:
             self.posts.reverse()
         if update:
@@ -234,6 +234,7 @@ def get_pbar(update: bool = False):
     return pbar
 
 # TODO: maybe add polls? need specific cookies to unlock poll votes
+
 
 def run():
     cookies = {"SOCS": get_SOCS_cookie()}
