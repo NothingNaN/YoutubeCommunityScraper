@@ -19,7 +19,7 @@ pip install yp-dl
   - [x] time_since
   - [x] utc_timestamp at download
   - [x] video_link
-  - [x] image_link
+  - [x] image_links
   - [x] text_content
   - [ ] poll_content
 - [x] Update support for the json files when new posts are made
