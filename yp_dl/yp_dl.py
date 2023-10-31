@@ -1,4 +1,7 @@
+from ast import If
 import itertools
+import random
+from shlex import join
 from requests import Response
 from requests_html import HTMLSession, AsyncHTMLSession
 from lxml import etree
@@ -56,17 +59,43 @@ def _get_video_link(post: dict) -> str | None:
         return None
 
 
-def _get_image_link(post: dict) -> str | None:
+def _handle_multi_images(post: dict) -> list[str] | None:
+    try:
+        links = list()
+        images = post['backstageAttachment']['postMultiImageRenderer']['images']
+        for image in images:
+            links.append(image['backstageImageRenderer']['image']['thumbnails'][-1]['url'])
+        return links
+    except KeyError as error:
+        logging.debug(f'function: _handle_multi_images: {error}')
+        return None
+
+
+def _handle_single_image(post: dict) -> str | None:
     try:
         return post['backstageAttachment']['backstageImageRenderer']['image']['thumbnails'][-1]['url']
     except KeyError as error:
-        logging.debug(f'function: _get_image_link: {error}')
+        logging.debug(f'function: _handle_single_image: {error}')
         return None
+
+
+def _get_image_links(post: dict) -> list[str] | None:
+    image_link = _handle_single_image(post)
+    if image_link:
+        return [image_link]
+
+    image_links = _handle_multi_images(post)
+    if image_links:
+        return image_links
+
+    return None
 
 
 def _get_text(post: dict) -> str | None:
     try:
-        return post['contentText']['runs'][0]['text']
+        text = post['contentText']['runs']
+        strings = [content['text'] for content in text]
+        return ''.join(strings)
     except KeyError as error:
         logging.debug(f'function: _get_text: {error}')
         return None
@@ -78,7 +107,7 @@ def _get_content(post: dict) -> dict:
         "time_since": post['publishedTimeText']['runs'][0]['text'],
         "time_of_download": datetime.now(timezone.utc).strftime("%d/%m/%Y, %H:%M:%S"),
         "video": _get_video_link(post),
-        "image": _get_image_link(post),
+        "images": _get_image_links(post),
         "text": _get_text(post)
     }
     return post_info
