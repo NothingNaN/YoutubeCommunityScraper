@@ -1,7 +1,5 @@
-from ast import If
 import itertools
 import random
-from shlex import join
 from requests import Response
 from requests_html import HTMLSession, AsyncHTMLSession
 from lxml import etree
