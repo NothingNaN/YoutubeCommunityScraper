@@ -1,5 +1,4 @@
 import itertools
-import random
 from requests import Response
 from requests_html import HTMLSession, AsyncHTMLSession
 from lxml import etree
@@ -9,24 +8,67 @@ import logging
 import sys
 import asyncio
 import argparse
+import os
 from rich.progress import Progress, TextColumn, TimeElapsedColumn, SpinnerColumn
 from datetime import datetime, timezone
+from yp_dl.exceptions import BadCookie
+
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+COOKIE_PATH = os.path.join(ROOT_DIR, "cookies.txt")
+DEFAULT_SOCS_COOKIE = "CAESEwgDEgk2NDg4NTY2OTgaAnJvIAEaBgiAtae0Bg"
 
 logging.basicConfig(format='[%(levelname)s]: %(message)s', level=logging.WARNING, stream=sys.stdout)
 
 
+def _handle_cookie_file(mode: str, cookie: str | None = None) -> str | None:
+    with open(COOKIE_PATH, mode=mode, encoding="utf-8") as target:
+        if mode == 'r':
+            return target.readline()
+        elif mode == 'w':
+            target.write(cookie)
+
+    return None
+
+
 def get_SOCS_cookie() -> str:
-    session = HTMLSession()
-    result = session.get(url='https://www.youtube.com/feed')
+    # Look for the SOCS cookie in the cookies.txt file
+    try:
+        cookie = _handle_cookie_file('r')
+    except FileNotFoundError:
+        logging.debug("cookies.txt doesn't exist")
+        session = HTMLSession()
+        result = session.get(url='https://www.youtube.com/feed')
 
-    form = result.html.xpath('/html/body/c-wiz/div/div/div/div[2]/div[1]/div[3]/div[1]/form[1]')[0].html
-    root = etree.HTML(form)
+        # Try to get cookie after filling the consent form
+        try:
+            form = result.html.xpath('/html/body/c-wiz/div/div/div/div[2]/div[1]/div[3]/div[1]/form[1]')[0].html
+            root = etree.HTML(form)
 
-    elements = root.xpath('//input')
-    data = {element.attrib['name']: element.attrib['value'] for element in elements}
-    result = session.post(url="https://consent.youtube.com/save", data=data)
+            elements = root.xpath('//input')
+            data = {element.attrib['name']: element.attrib['value'] for element in elements}
 
-    return session.cookies['SOCS']
+            result = session.post(url="https://consent.youtube.com/save", data=data)
+            cookie = session.cookies['SOCS']
+            _handle_cookie_file('w', cookie=cookie)
+
+        # Try to get SOCS cookie if no consent form is present
+        except Exception as error:
+            logging.debug(error)
+            try:
+                cookie = session.cookies['SOCS']
+                if cookie == "CAAaBgiAtae0Bg" or len(cookie) <= 14:
+                    raise BadCookie("Invalid SOCS cookie")
+                _handle_cookie_file('w', cookie=cookie)
+
+             # If all fails, return default cookie
+            except KeyError:
+                logging.debug("Unable to get cookie even after skipping form")
+                return DEFAULT_SOCS_COOKIE
+            except BadCookie as error:
+                logging.debug(error)
+                return DEFAULT_SOCS_COOKIE
+
+    return cookie
 
 
 def _payload(token: str, originalURL: str) -> dict:
@@ -241,6 +283,8 @@ def get_arg_parser():
                     help='Appends the existing json file(s) with the new posts.')
     ap.add_argument('-v', '--verbose', action='store_true',
                     help='Gives more details about what\'s going on when the program runs.')
+    ap.add_argument('-o', '--overwrite-cookie', action='store_true',
+                    help='Overwrites the SOCS cookie in the cookies.txt file with a Default SOCS cookie within the project. Use if having problems retrieving posts.')
 
     return ap
 
@@ -264,13 +308,16 @@ def get_pbar(update: bool = False):
 
 
 def run():
-    cookies = {"SOCS": get_SOCS_cookie()}
     ap = get_arg_parser()
     args = vars(ap.parse_args())
 
     if args['verbose']:
         logging.getLogger().setLevel(logging.DEBUG)
 
+    if args['overwrite_cookie']:
+        _handle_cookie_file('w', cookie=DEFAULT_SOCS_COOKIE)
+
+    cookies = {"SOCS": get_SOCS_cookie()}
     objects = [YoutubePosts(link, cookies) for link in args['link']]
     pbar = get_pbar(args['update'])
 
@@ -280,6 +327,7 @@ def run():
         loop.run_until_complete(asyncio.gather(*tasks))
         for obj in objects:
             obj.save(pbar, folder=args['folderpath'], reverse=args['reverse'], update=args['update'])
+
 
 if __name__ == "__main__":
     run()

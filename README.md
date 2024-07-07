@@ -44,4 +44,7 @@ options:
                         use this option with --update, your post order will be messed up.
   -u, --update          Appends the existing json file(s) with the new posts.
   -v, --verbose         Gives more details about what's going on when the program runs.
+  -o, --overwrite-cookie
+                        Overwrites the SOCS cookie in the cookies.txt file with a Default SOCS cookie within 
+                        the project. Use if having problems retrieving posts.
 ```

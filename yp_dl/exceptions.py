@@ -1,0 +1,2 @@
+class BadCookie(Exception):
+    pass
