@@ -285,6 +285,8 @@ def get_arg_parser():
                     help='Gives more details about what\'s going on when the program runs.')
     ap.add_argument('-o', '--overwrite-cookie', action='store_true',
                     help='Overwrites the SOCS cookie in the cookies.txt file with a Default SOCS cookie within the project. Use if having problems retrieving posts.')
+    ap.add_argument('-d', '--delete-cookie', action='store_true',
+                    help='Removes the cookie file to generate it again. Use if your SOCS key has expired (lifetime is 2 years).')
 
     return ap
 
@@ -316,6 +318,12 @@ def run():
 
     if args['overwrite_cookie']:
         _handle_cookie_file('w', cookie=DEFAULT_SOCS_COOKIE)
+
+    if args['delete_cookie']:
+        try:
+            os.remove(COOKIE_PATH)
+        except FileNotFoundError:
+            logging.warning("cookies.txt not found")
 
     cookies = {"SOCS": get_SOCS_cookie()}
     objects = [YoutubePosts(link, cookies) for link in args['link']]
