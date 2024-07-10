@@ -95,7 +95,7 @@ def _get_video_link(post: dict) -> str | None:
     try:
         return 'https://www.youtube.com/watch?v=' + post['backstageAttachment']['videoRenderer']['videoId']
     except KeyError as error:
-        logging.debug(f'function: _get_video_link: {error}')
+        logging.debug(f'function: _get_video_link: KeyError {error}')
         return None
 
 
@@ -107,7 +107,7 @@ def _handle_multi_images(post: dict) -> list[str] | None:
             links.append(image['backstageImageRenderer']['image']['thumbnails'][-1]['url'])
         return links
     except KeyError as error:
-        logging.debug(f'function: _handle_multi_images: {error}')
+        logging.debug(f'function: _handle_multi_images: KeyError {error}')
         return None
 
 
@@ -115,7 +115,7 @@ def _handle_single_image(post: dict) -> str | None:
     try:
         return post['backstageAttachment']['backstageImageRenderer']['image']['thumbnails'][-1]['url']
     except KeyError as error:
-        logging.debug(f'function: _handle_single_image: {error}')
+        logging.debug(f'function: _handle_single_image: KeyError {error}')
         return None
 
 
@@ -137,7 +137,7 @@ def _get_text(post: dict) -> str | None:
         strings = [content['text'] for content in text]
         return ''.join(strings)
     except KeyError as error:
-        logging.debug(f'function: _get_text: {error}')
+        logging.debug(f'function: _get_text: KeyError {error}')
         return None
 
 
@@ -196,7 +196,7 @@ class YoutubePosts:
 
     def __get_init_posts(self, response: Response) -> None:
         string = response.html.find("script", containing='\"backstagePostThreadRenderer\":')[0].text
-        posts = re.findall(pattern="({\"backstagePostThreadRenderer\":)(.+?)(\"enableDisplayloggerExperiment\":true}}}(?=,{))", string=string)
+        posts = re.findall(pattern="({\"backstagePostThreadRenderer\":)(.+?)(\"enableDisplayloggerExperiment\":true}}}(?=(,{)|(],)))", string=string)
 
         json_posts = [json.loads(post[1] + post[2][:-1]) for post in posts]
         for post in json_posts:
@@ -215,7 +215,7 @@ class YoutubePosts:
         self.taskID = pbar.add_task(f"{self.channel_name}", total=total, new=None)
 
         eof = False
-        while not eof:
+        while not eof and not init_total < 10:
             response = await self.request(init=False)
             response = json.loads(response.text)
             try:
@@ -235,11 +235,15 @@ class YoutubePosts:
                     try:
                         self.token = post['continuationItemRenderer']['continuationEndpoint']['continuationCommand']['token']
                     except KeyError:
+                        logging.debug("No token at end of posts.")
                         eof = True
-                        postRenderer = post['backstagePostThreadRenderer']['post']['backstagePostRenderer']
-                        self.posts.append(_get_content(post=postRenderer))
-                        total += 1
-                        pbar.update(self.taskID, advance=1, total=total)
+                        try:
+                            postRenderer = post['backstagePostThreadRenderer']['post']['backstagePostRenderer']
+                            self.posts.append(_get_content(post=postRenderer))
+                            total += 1
+                            pbar.update(self.taskID, advance=1, total=total)
+                        except KeyError:
+                            logging.warning("Initial suspected token was not a post either.")
 
         # this is here for the spinner to keep spinning without interruptions
         pbar.update(self.taskID, advance=init_total)
