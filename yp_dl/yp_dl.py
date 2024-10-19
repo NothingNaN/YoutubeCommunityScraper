@@ -136,9 +136,14 @@ def _get_text(post: dict) -> str | None:
         text = post['contentText']['runs']
         strings = [content['text'] for content in text]
         return ''.join(strings)
-    except KeyError as error:
-        logging.debug(f'function: _get_text: KeyError {error}')
-        return None
+    except KeyError:  # sharedPostRenderer
+        try:
+            text = post['content']['runs']
+            strings = [content['text'] for content in text]
+            return ''.join(strings)
+        except KeyError as error:
+            logging.debug(f'function: _get_text: KeyError {error}')
+            return None
 
 
 def _get_content(post: dict) -> dict:
@@ -228,7 +233,11 @@ class YoutubePosts:
 
             for i, post in enumerate(posts):
                 if i != len(posts) - 1:
-                    postRenderer = post['backstagePostThreadRenderer']['post']['backstagePostRenderer']
+                    try:
+                        postRenderer = post['backstagePostThreadRenderer']['post']['backstagePostRenderer']
+                    except KeyError as error:
+                        logging.debug(f"Post({total - len(posts) - 1 + i}): sharedPostRenderer")
+                        postRenderer = post['backstagePostThreadRenderer']['post']['sharedPostRenderer']
                     self.posts.append(_get_content(post=postRenderer))
                     pbar.update(self.taskID, advance=1)
                 else:
