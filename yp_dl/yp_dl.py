@@ -201,7 +201,7 @@ class YoutubePosts:
 
     def __get_init_posts(self, response: Response) -> None:
         string = response.html.find("script", containing='\"backstagePostThreadRenderer\":')[0].text
-        posts = re.findall(pattern="({\"backstagePostThreadRenderer\":)(.+?)(\"enableDisplayloggerExperiment\":true}}}(?=(,{)|(],)))", string=string)
+        posts = re.findall(pattern="({\"backstagePostThreadRenderer\":)(.+?)(\"}}}}(?=(,{)|(],)))", string=string)
 
         json_posts = [json.loads(post[1] + post[2][:-1]) for post in posts]
         for post in json_posts:
