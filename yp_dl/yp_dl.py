@@ -232,6 +232,8 @@ class YoutubePosts:
         init_total = total
         self.taskID = pbar.add_task(f"{self.channel_name}", total=total, new=None)
 
+        if init_total == 0:
+            logging.warning("No posts found. Maybe YouTube changed its API response format?")
         eof = False
         while not eof and not init_total < 10:
             response = await self.request(init=False)
