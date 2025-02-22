@@ -9,6 +9,7 @@ import sys
 import asyncio
 import argparse
 import os
+import urllib.parse
 from rich.progress import Progress, TextColumn, TimeElapsedColumn, SpinnerColumn
 from datetime import datetime, timezone
 from yp_dl.exceptions import BadCookie
@@ -131,15 +132,27 @@ def _get_image_links(post: dict) -> list[str] | None:
     return None
 
 
+def _handle_text(content: dict) -> str:
+    try:
+        link_redirect = content['navigationEndpoint']['urlEndpoint']['url']
+        # for some reason the url can be messy in strange ways (idk why; maybe it's just user error); a smart sanitizer would be great
+        link = re.findall(pattern="(?<=q=)(.+)", string=link_redirect)
+        url = urllib.parse.unquote(link[0])
+        # print(f"Link: {link} \nURL: {url}")
+        return url
+    except KeyError as error:
+        return content['text']
+
+
 def _get_text(post: dict) -> str | None:
     try:
         text = post['contentText']['runs']
-        strings = [content['text'] for content in text]
+        strings = [_handle_text(content) for content in text]
         return ''.join(strings)
     except KeyError:  # sharedPostRenderer
         try:
             text = post['content']['runs']
-            strings = [content['text'] for content in text]
+            strings = [_handle_text(content) for content in text]
             return ''.join(strings)
         except KeyError as error:
             logging.debug(f'function: _get_text: KeyError {error}')
