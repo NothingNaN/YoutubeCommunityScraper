@@ -27,21 +27,23 @@ pip install yp-dl
 
 ## Usage
 ```
-usage: yp-dl [-h] [-f FOLDER_PATH] [-r] [-u] [-v] link [link ...]
+usage: yp-dl [-h] [-f FOLDER_PATH] [-r] [-u] [-v] [-o] [-d] link [link ...]
 
 An asynchronous scraper that downloads youtube posts from youtube channels in json format.
 
 positional arguments:
-  link                  Provide any number of links. Link example: https://www.youtube.com/@3blue1brown
+  link                  Provide any number of links. 
+                        Link example: https://www.youtube.com/@3blue1brown
 
 options:
   -h, --help            show this help message and exit
   -f FOLDER_PATH, --folder-path FOLDER_PATH
-                        Provide the path of the folder you wish to store/update your json files. If it's in the
-                        current working directory (CWD), just type the folder name. If none is provided, everything
-                        will be stored/updated in the CWD.
-  -r, --reverse         Reverses the order of the posts from oldest first to newest first. Be wary though, if you
-                        use this option with --update, your post order will be messed up.
+                        Provide the path of the folder you wish to store/update your json files. 
+                        If it's in the current working directory (CWD), just type the folder 
+                        name. If none is provided, everything will be stored/updated in the CWD.
+  -r, --reverse         Reverses the order of the posts from oldest first to newest first. 
+                        Be wary though, if you use this option with --update, your post order 
+                        will be messed up.
   -u, --update          Appends the existing json file(s) with the new posts.
   -v, --verbose         Gives more details about what's going on when the program runs.
   -o, --overwrite-cookie
