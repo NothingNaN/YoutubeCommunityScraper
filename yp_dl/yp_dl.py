@@ -140,6 +140,9 @@ def _handle_text(content: dict) -> str:
         url = urllib.parse.unquote(link[0])
         # print(f"Link: {link} \nURL: {url}")
         return url
+    except IndexError as error:
+        # youtube link, so not redirect
+        return link_redirect
     except KeyError as error:
         return content['text']
 
