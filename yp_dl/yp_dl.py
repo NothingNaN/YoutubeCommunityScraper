@@ -96,7 +96,7 @@ def _get_video_link(post: dict) -> str | None:
     try:
         return 'https://www.youtube.com/watch?v=' + post['backstageAttachment']['videoRenderer']['videoId']
     except KeyError as error:
-        logging.debug(f'function: _get_video_link: KeyError {error}')
+        logging.debug(f'[POST_ID: {post["postId"]}] function: _get_video_link: KeyError {error}')
         return None
 
 
@@ -108,7 +108,7 @@ def _handle_multi_images(post: dict) -> list[str] | None:
             links.append(image['backstageImageRenderer']['image']['thumbnails'][-1]['url'])
         return links
     except KeyError as error:
-        logging.debug(f'function: _handle_multi_images: KeyError {error}')
+        logging.debug(f'[POST_ID: {post["postId"]}] function: _handle_multi_images: KeyError {error}')
         return None
 
 
@@ -116,7 +116,7 @@ def _handle_single_image(post: dict) -> str | None:
     try:
         return post['backstageAttachment']['backstageImageRenderer']['image']['thumbnails'][-1]['url']
     except KeyError as error:
-        logging.debug(f'function: _handle_single_image: KeyError {error}')
+        logging.debug(f'[POST_ID: {post["postId"]}] function: _handle_single_image: KeyError {error}')
         return None
 
 
@@ -158,7 +158,7 @@ def _get_text(post: dict) -> str | None:
             strings = [_handle_text(content) for content in text]
             return ''.join(strings)
         except KeyError as error:
-            logging.debug(f'function: _get_text: KeyError {error}')
+            logging.debug(f'[POST_ID: {post["postId"]}] function: _get_text: KeyError {error}')
             return None
 
 
@@ -215,35 +215,52 @@ class YoutubePosts:
         except IndexError:
             logging.warning(f'{self.channel_name}: Continuation token not found.')
 
-    def __get_init_posts(self, response: Response) -> None:
-        string = response.html.find("script", containing='\"backstagePostThreadRenderer\":')[0].text
-        posts = re.findall(pattern="({\"backstagePostThreadRenderer\":)(.+?)(\"}}}}(?=(,{)|(],)))", string=string)
+    def __get_init_posts(self, response: Response) -> bool:
 
-        json_posts = [json.loads(post[1] + post[2][:-1]) for post in posts]
-        for post in json_posts:
-            postRenderer = post['post']['backstagePostRenderer']
-            self.posts.append(_get_content(post=postRenderer))
+        try:
+            string = response.html.find("script", containing='\"backstagePostThreadRenderer\":')[0].text
+            posts = re.findall(pattern="({\"backstagePostThreadRenderer\":)(.+?)(\"}}}}(?=(,{)|(],)))", string=string)
+
+            json_posts = [json.loads(post[1] + post[2][:-1]) for post in posts]
+            for post in json_posts:
+                try:
+                    postRenderer = post['post']['backstagePostRenderer']
+                except KeyError:
+                    postRenderer = post['post']['sharedPostRenderer']
+                self.posts.append(_get_content(post=postRenderer))
+        except IndexError as error:
+            logging.debug("No init posts", exc_info=True)
+            return False
+
+        return True
 
     async def scrape(self, pbar: Progress) -> None:
         response = await self.request(init=True)
         self.__get_API_key(response)
         self.__get_API_URL(response)
         self.__get_token(response)
-        self.__get_init_posts(response)
+        init_posts = self.__get_init_posts(response)
 
         total = len(self.posts)
         init_total = total
         self.taskID = pbar.add_task(f"{self.channel_name}", total=total, new=None)
 
-        if init_total == 0:
-            logging.warning("No posts found. Maybe YouTube changed its API response format?")
         eof = False
-        while not eof and not init_total < 10:
+        while not eof and (not init_total < 10 or not init_posts):
             response = await self.request(init=False)
             response = json.loads(response.text)
             try:
                 posts = response['onResponseReceivedEndpoints'][0]['appendContinuationItemsAction']['continuationItems']
+                if total == 0:
+                    try:
+                        posts[0]['aboutChannelRenderer']  # if this exists then channel has no posts
+                        logging.debug("No posts found")
+                        break
+                    except Exception:
+                        pass
             except KeyError:
+                if not init_posts:
+                    logging.warning("No posts found. Maybe YouTube changed its API response format?")
                 break
 
             total += len(posts) - 1
