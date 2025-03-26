@@ -11,7 +11,8 @@ Youtube stops retrieving old community posts after 200 posts on a channel. There
 ```bash
 pip install yp-dl
 ```
-<span style="color: orange">⚠️ ***Notice:***</span> *For people on version `0.9.11` and before, you won't be able to use `pip install upgrade yp-dl` since I've upgraded the `lxml` version dependency above what is specified (refused to build on the old version suddenly for some reason). Please uninstall and then install `yp-dl` again to get the latest version.*
+> [!WARNING]
+> *For people on version `0.9.11` and before, you won't be able to use `pip install --upgrade yp-dl` since I've upgraded the `lxml` version dependency above what is specified (refused to build on the old version suddenly for some reason). Please uninstall and then install `yp-dl` again to get the latest version.*
 
 ## Features
 - [x] Asynchronous support
