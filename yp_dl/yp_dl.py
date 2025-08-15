@@ -11,6 +11,7 @@ import argparse
 import os
 import urllib.parse
 from rich.progress import Progress, TextColumn, TimeElapsedColumn, SpinnerColumn
+from rich.logging import RichHandler
 from datetime import datetime, timezone
 from yp_dl.exceptions import BadCookie
 
@@ -18,7 +19,7 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 COOKIE_PATH = os.path.join(ROOT_DIR, "cookies.txt")
 DEFAULT_SOCS_COOKIE = "CAESEwgDEgk2NDg4NTY2OTgaAnJvIAEaBgiAtae0Bg"
 
-logging.basicConfig(format='[%(levelname)s]: %(message)s', level=logging.WARNING, stream=sys.stdout)
+logging.basicConfig(format='%(message)s', level=logging.WARNING, handlers=[RichHandler(rich_tracebacks=True)])
 
 
 def _handle_cookie_file(mode: str, cookie: str | None = None) -> str | None:
@@ -76,13 +77,13 @@ def _payload(token: str, originalURL: str) -> dict:
     json_payload = {
         "context": {
             "client": {
-                "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36,gzip(gfe)",
+                "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36,gzip(gfe)",
                 "clientName": "WEB",
                 "clientVersion": "2.20231010.10.01",
                 "originalUrl": originalURL,
                 "platform": "DESKTOP",
                 "browserName": "Chrome",
-                "browserVersion": "117.0.0.0",
+                "browserVersion": "139.0.0.0",
                 "acceptHeader": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
                 "utcOffsetMinutes": 0
             }
@@ -182,7 +183,7 @@ class YoutubePosts:
         self.token = None
         self.channel_link = channel_link
         self.channel_name = channel_link[24:] if channel_link[-1] != '/' else channel_link[24:-1]
-        self.link = channel_link + '/community'
+        self.link = channel_link + '/posts'
         self.session = AsyncHTMLSession()
         self.cookies = cookies
         self.taskID = None
