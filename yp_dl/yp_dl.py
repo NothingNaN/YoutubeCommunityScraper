@@ -235,7 +235,7 @@ class YoutubePosts:
 
         return True
 
-    async def scrape(self, pbar: Progress, limit: int | None = None) -> None:
+    async def scrape(self, pbar: Progress | None, limit: int | None = None) -> None:
         response = await self.request(init=True)
         self.__get_API_key(response)
         self.__get_API_URL(response)
@@ -244,7 +244,7 @@ class YoutubePosts:
 
         total = len(self.posts)
         init_total = total
-        
+
         # Only add a task to pbar if it exists (allows module use without UI)
         if pbar:
             self.taskID = pbar.add_task(f"{self.channel_name}", total=total, new=None)
@@ -257,7 +257,7 @@ class YoutubePosts:
             if limit and len(self.posts) >= limit:
                 logging.debug(f"Scrape limit reached: {limit}")
                 break
-            
+
             response = await self.request(init=False)
             response = json.loads(response.text)
             try:
@@ -281,10 +281,10 @@ class YoutubePosts:
             for i, post in enumerate(posts):
                 # Check limit again before processing individual posts from the batch
                 if limit and len(self.posts) >= limit:
-                    eof = True # Set eof flag to also stop the outer while loop
+                    eof = True  # Set eof flag to also stop the outer while loop
                     logging.debug(f"Scrape limit reached during loop: {limit}")
                     break
-                
+
                 if i != len(posts) - 1:
                     try:
                         postRenderer = post['backstagePostThreadRenderer']['post']['backstagePostRenderer']
@@ -314,13 +314,10 @@ class YoutubePosts:
             pbar.update(self.taskID, advance=init_total)
         self.posts.reverse()  # reverses post order from newest first to oldest first
 
-    def save(self, pbar: Progress, folder: str | None = None, reverse: bool = False, update: bool = False) -> None:
-
+    def save(self, pbar: Progress | None, folder: str | None = None, reverse: bool = False, update: bool = False) -> None:
         if folder:
             folder += '/' if folder[-1] != '/' else ''
-            
-            # Automatically create the output folder if it doesn't exist
-            os.makedirs(folder, exist_ok=True)
+            os.makedirs(folder, exist_ok=True)  # create folder if it doesn't exist
         if reverse:
             self.posts.reverse()
         if update:
@@ -365,8 +362,6 @@ def get_arg_parser():
                     help='Overwrites the SOCS cookie in the cookies.txt file with a Default SOCS cookie within the project. Use if having problems retrieving posts.')
     ap.add_argument('-d', '--delete-cookie', action='store_true',
                     help='Removes the cookie file to generate it again. Use if your SOCS key has expired (lifetime is 2 years).')
-
-    # Add --limit argument to fetch only the N newest posts
     ap.add_argument('-l', '--limit', dest='limit', metavar='N', type=int, default=None,
                     help='Stops scraping after collecting N posts (from newest). Useful for checking recent posts.')
 
@@ -411,10 +406,7 @@ def run():
     objects = [YoutubePosts(link, cookies) for link in args['link']]
     pbar = get_pbar(args['update'])
 
-    # Get the limit from args
-    limit = args['limit']
-    # Pass the limit to each scrape task
-    tasks = [obj.scrape(pbar, limit=limit) for obj in objects]
+    tasks = [obj.scrape(pbar, limit=args['limit']) for obj in objects]
     loop = asyncio.get_event_loop()
     with pbar:
         loop.run_until_complete(asyncio.gather(*tasks))
