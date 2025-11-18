@@ -1,6 +1,5 @@
 import itertools
-from requests import Response
-from requests_html import HTMLSession, AsyncHTMLSession
+from requests_html import HTMLSession, AsyncHTMLSession, HTMLResponse
 from lxml import etree
 import re
 import json
@@ -188,35 +187,35 @@ class YoutubePosts:
         self.cookies = cookies
         self.taskID = None
 
-    async def request(self, init: bool = True) -> Response:
+    async def request(self, init: bool = True) -> HTMLResponse:
         if init:
             return await self.session.get(url=self.link + '?persist_hl=1&hl=en', cookies=self.cookies)
         else:
             payload = _payload(token=self.token, originalURL=self.link)
             return await self.session.post('https://www.youtube.com' + self.api_url + '?key=' + self.api_key + '&prettyPrint=false', json=payload)
 
-    def __get_API_key(self, response: Response) -> None:
+    def __get_API_key(self, response: HTMLResponse) -> None:
         try:
             string = response.html.find("script", containing='\"INNERTUBE_API_KEY\":')[0].text
             self.api_key = re.search(pattern="(?<=\"INNERTUBE_API_KEY\":\")(.+?)(?=\")", string=string)[0]
         except IndexError:
             logging.warning(f'{self.channel_name}: API key not found.')
 
-    def __get_API_URL(self, response: Response) -> None:
+    def __get_API_URL(self, response: HTMLResponse) -> None:
         try:
             string = response.html.find("script", containing='\"apiUrl\":')[0].text
             self.api_url = re.search(pattern="(?<=\"apiUrl\":\")(.+?)(?=\")", string=string)[0]
         except IndexError:
             logging.warning(f'{self.channel_name}: API URL not found.')
 
-    def __get_token(self, response: Response) -> None:
+    def __get_token(self, response: HTMLResponse) -> None:
         try:
             string = response.html.find("script", containing='\"token\":')[0].text
             self.token = re.search(pattern="(?<=\"token\":\")(.+?)(?=\")", string=string)[0]
         except IndexError:
             logging.warning(f'{self.channel_name}: Continuation token not found.')
 
-    def __get_init_posts(self, response: Response) -> bool:
+    def __get_init_posts(self, response: HTMLResponse) -> bool:
 
         try:
             string = response.html.find("script", containing='\"backstagePostThreadRenderer\":')[0].text
