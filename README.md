@@ -27,7 +27,7 @@ pip install yp-dl
 
 ## Usage
 ```
-usage: yp-dl [-h] [-f FOLDER_PATH] [-r] [-u] [-v] [-o] [-d] link [link ...]
+usage: yp-dl [-h] [-f FOLDER_PATH] [-r] [-u] [-v] [-l N] [-o] [-d] link [link ...]
 
 An asynchronous scraper that downloads youtube posts from youtube channels in json format.
 
@@ -46,6 +46,7 @@ options:
                         will be messed up.
   -u, --update          Appends the existing json file(s) with the new posts.
   -v, --verbose         Gives more details about what's going on when the program runs.
+  -l N, --limit N       Stops scraping after collecting N posts (from newest). 
   -o, --overwrite-cookie
                         Overwrites the SOCS cookie in the cookies.txt file with a Default SOCS 
                         cookie within the project. Use if having problems retrieving posts.
