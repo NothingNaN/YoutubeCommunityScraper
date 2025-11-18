@@ -235,7 +235,7 @@ class YoutubePosts:
 
         return True
 
-    async def scrape(self, pbar: Progress) -> None:
+    async def scrape(self, pbar: Progress | None, limit: int | None = None) -> None:
         response = await self.request(init=True)
         self.__get_API_key(response)
         self.__get_API_URL(response)
@@ -244,10 +244,20 @@ class YoutubePosts:
 
         total = len(self.posts)
         init_total = total
-        self.taskID = pbar.add_task(f"{self.channel_name}", total=total, new=None)
+
+        # Only add a task to pbar if it exists (allows module use without UI)
+        if pbar:
+            self.taskID = pbar.add_task(f"{self.channel_name}", total=total, new=None)
+        else:
+            self.taskID = None
 
         eof = False
         while not eof and (not init_total < 10 or not init_posts):
+            # Check if the post limit has been reached at the start of the loop
+            if limit and len(self.posts) >= limit:
+                logging.debug(f"Scrape limit reached: {limit}")
+                break
+
             response = await self.request(init=False)
             response = json.loads(response.text)
             try:
@@ -265,9 +275,16 @@ class YoutubePosts:
                 break
 
             total += len(posts) - 1
-            pbar.update(self.taskID, total=total)
+            if pbar:
+                pbar.update(self.taskID, total=total)
 
             for i, post in enumerate(posts):
+                # Check limit again before processing individual posts from the batch
+                if limit and len(self.posts) >= limit:
+                    eof = True  # Set eof flag to also stop the outer while loop
+                    logging.debug(f"Scrape limit reached during loop: {limit}")
+                    break
+
                 if i != len(posts) - 1:
                     try:
                         postRenderer = post['backstagePostThreadRenderer']['post']['backstagePostRenderer']
@@ -275,7 +292,8 @@ class YoutubePosts:
                         logging.debug(f"Post({total - len(posts) - 1 + i}): sharedPostRenderer")
                         postRenderer = post['backstagePostThreadRenderer']['post']['sharedPostRenderer']
                     self.posts.append(_get_content(post=postRenderer))
-                    pbar.update(self.taskID, advance=1)
+                    if pbar:
+                        pbar.update(self.taskID, advance=1)
                 else:
                     try:
                         self.token = post['continuationItemRenderer']['continuationEndpoint']['continuationCommand']['token']
@@ -286,34 +304,42 @@ class YoutubePosts:
                             postRenderer = post['backstagePostThreadRenderer']['post']['backstagePostRenderer']
                             self.posts.append(_get_content(post=postRenderer))
                             total += 1
-                            pbar.update(self.taskID, advance=1, total=total)
+                            if pbar:
+                                pbar.update(self.taskID, advance=1, total=total)
                         except KeyError:
                             logging.warning("Initial suspected token was not a post either.")
 
         # this is here for the spinner to keep spinning without interruptions
-        pbar.update(self.taskID, advance=init_total)
+        if pbar:
+            pbar.update(self.taskID, advance=init_total)
         self.posts.reverse()  # reverses post order from newest first to oldest first
 
-    def save(self, pbar: Progress, folder: str | None = None, reverse: bool = False, update: bool = False) -> None:
-
+    def save(self, pbar: Progress | None, folder: str | None = None, reverse: bool = False, update: bool = False) -> None:
         if folder:
             folder += '/' if folder[-1] != '/' else ''
+            os.makedirs(folder, exist_ok=True)  # create folder if it doesn't exist
         if reverse:
             self.posts.reverse()
         if update:
-            with open(f'{folder}{self.channel_name}_posts.json', 'r', encoding='utf-8') as target:
-                oldposts = json.load(target)
-                oldpostIDs = {post['post_link']: 'post_link' for post in oldposts}
-                i = 0
-                for post in self.posts[:]:
-                    try:
-                        oldpostIDs[post['post_link']]
-                        self.posts.pop(i)
-                    except KeyError:
-                        i += 1
-
-                pbar.update(self.taskID, new=len(self.posts))
-                self.posts = list(itertools.chain(oldposts, self.posts))
+            try:
+                with open(f'{folder}{self.channel_name}_posts.json', 'r', encoding='utf-8') as target:
+                    oldposts = json.load(target)
+                    oldpostIDs = {post['post_link']: 'post_link' for post in oldposts}
+                    i = 0
+                    for post in self.posts[:]:
+                        try:
+                            oldpostIDs[post['post_link']]
+                            self.posts.pop(i)
+                        except KeyError:
+                            i += 1
+                    if pbar:
+                        pbar.update(self.taskID, new=len(self.posts))
+                    self.posts = list(itertools.chain(oldposts, self.posts))
+            except FileNotFoundError:
+                # Handle case where --update is used but the JSON file doesn't exist yet
+                logging.debug(f"Update file not found, creating new file: {self.channel_name}_posts.json")
+                if pbar:
+                    pbar.update(self.taskID, new=len(self.posts))
 
         with open(f'{folder}{self.channel_name}_posts.json', 'w', encoding='utf-8') as target:
             json.dump(self.posts, target, ensure_ascii=False, indent=4)
@@ -336,6 +362,8 @@ def get_arg_parser():
                     help='Overwrites the SOCS cookie in the cookies.txt file with a Default SOCS cookie within the project. Use if having problems retrieving posts.')
     ap.add_argument('-d', '--delete-cookie', action='store_true',
                     help='Removes the cookie file to generate it again. Use if your SOCS key has expired (lifetime is 2 years).')
+    ap.add_argument('-l', '--limit', dest='limit', metavar='N', type=int, default=None,
+                    help='Stops scraping after collecting N posts (from newest). Useful for checking recent posts.')
 
     return ap
 
@@ -378,7 +406,7 @@ def run():
     objects = [YoutubePosts(link, cookies) for link in args['link']]
     pbar = get_pbar(args['update'])
 
-    tasks = [obj.scrape(pbar) for obj in objects]
+    tasks = [obj.scrape(pbar, limit=args['limit']) for obj in objects]
     loop = asyncio.get_event_loop()
     with pbar:
         loop.run_until_complete(asyncio.gather(*tasks))
