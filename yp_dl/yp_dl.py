@@ -401,12 +401,19 @@ def run():
         except FileNotFoundError:
             logging.warning("cookies.txt not found")
 
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError as error:
+        logging.debug(error)
+        logging.debug("Setting a new event loop instead.")
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
     cookies = {"SOCS": get_SOCS_cookie()}
     objects = [YoutubePosts(link, cookies) for link in args['link']]
     pbar = get_pbar(args['update'])
 
     tasks = [obj.scrape(pbar, limit=args['limit']) for obj in objects]
-    loop = asyncio.get_event_loop()
     with pbar:
         loop.run_until_complete(asyncio.gather(*tasks))
         for obj in objects:
