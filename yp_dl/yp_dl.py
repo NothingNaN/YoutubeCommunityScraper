@@ -1,4 +1,5 @@
 import itertools
+from operator import truediv
 from requests_html import HTMLSession, AsyncHTMLSession, HTMLResponse
 from lxml import etree
 import re
@@ -219,14 +220,25 @@ class YoutubePosts:
 
         try:
             string = response.html.find("script", containing='\"backstagePostThreadRenderer\":')[0].text
-            posts = re.findall(pattern="({\"backstagePostThreadRenderer\":)(.+?)(\"}}}}(?=(,{)|(],)))", string=string)
+            content = re.findall(pattern="(?<=(\"contents\":))(.+?)(}(?=(,\"header\":)))", string=string)
+            json_posts = None
+            try:
+                json_posts = json.loads(''.join(content[0][1:-1]))["twoColumnBrowseResultsRenderer"]["tabs"][4]["tabRenderer"]["content"]["sectionListRenderer"]["contents"][0]["itemSectionRenderer"]["contents"]
+            except Exception as err:
+                logging.error("Please tell the developer to fix this. YouTube changed stuff.", exc_info=True)
+                exit()
 
-            json_posts = [json.loads(post[1] + post[2][:-1]) for post in posts]
             for post in json_posts:
                 try:
-                    postRenderer = post['post']['backstagePostRenderer']
-                except KeyError:
-                    postRenderer = post['post']['sharedPostRenderer']
+                    postRenderer = post['backstagePostThreadRenderer']['post']['backstagePostRenderer']
+                except KeyError as err:
+                    if err.args[0] == "backstagePostRenderer":
+                        postRenderer = post['backstagePostThreadRenderer']['post']['sharedPostRenderer']
+                    elif err.args[0] == "backstagePostThreadRenderer" and post["continuationItemRenderer"]:
+                        continue
+                    else:
+                        logging.error("Please tell the developer to fix this. YouTube changed stuff.", exc_info=True)
+                        exit()
                 self.posts.append(_get_content(post=postRenderer))
         except IndexError as error:
             logging.debug("No init posts", exc_info=True)
