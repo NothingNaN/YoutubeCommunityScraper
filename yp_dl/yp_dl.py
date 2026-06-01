@@ -1,5 +1,4 @@
 import itertools
-from operator import truediv
 from requests_html import HTMLSession, AsyncHTMLSession, HTMLResponse
 from lxml import etree
 import re
@@ -234,7 +233,7 @@ class YoutubePosts:
                 except KeyError as err:
                     if err.args[0] == "backstagePostRenderer":
                         postRenderer = post['backstagePostThreadRenderer']['post']['sharedPostRenderer']
-                    elif err.args[0] == "backstagePostThreadRenderer" and post["continuationItemRenderer"]:
+                    elif err.args[0] == "backstagePostThreadRenderer":
                         continue
                     else:
                         logging.error("Please tell the developer to fix this. YouTube changed stuff.", exc_info=True)
