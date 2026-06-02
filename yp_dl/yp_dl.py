@@ -222,7 +222,13 @@ class YoutubePosts:
             content = re.findall(pattern="(?<=(\"contents\":))(.+?)(}(?=(,\"header\":)))", string=string)
             json_posts = None
             try:
-                json_posts = json.loads(''.join(content[0][1:-1]))["twoColumnBrowseResultsRenderer"]["tabs"][4]["tabRenderer"]["content"]["sectionListRenderer"]["contents"][0]["itemSectionRenderer"]["contents"]
+                tabs = json.loads(''.join(content[0][1:-1]))["twoColumnBrowseResultsRenderer"]["tabs"]
+                index = 0
+                for i, tab in enumerate(tabs):
+                    if tab["tabRenderer"]["title"] == "Posts":
+                        index = i
+                        break
+                json_posts = tabs[index]["tabRenderer"]["content"]["sectionListRenderer"]["contents"][0]["itemSectionRenderer"]["contents"]
             except Exception as err:
                 logging.error("Please tell the developer to fix this. YouTube changed stuff.", exc_info=True)
                 exit()
