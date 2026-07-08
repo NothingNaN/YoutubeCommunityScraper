@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "yp-dl"
-version = "0.9.23"
+version = "0.9.24"
 description = "Asynchronous scraper to download youtube community posts"
 authors = ["Boltzmann Potato <boltzmannpotato@proton.me>"]
 license = "MIT"
@@ -20,4 +20,4 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-yp-dl = "yp_dl.yp_dl:run"
+yp-dl = "yp_dl.main:run"
